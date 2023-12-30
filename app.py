@@ -7,29 +7,28 @@ import copy
 
 ##iki bug var graph cizmede bazen tekli kalıyor node ++ best partition ilk partitionsa kod hata veriyor onun için if lazım
 
-def createGraph(nodes,edges):
-    G = nx.Graph() 
-    G.add_nodes_from(nodes)
+def createGraph(nodes, edges):
+    G = nx.complete_graph(nodes)
 
-    if edges < len(nodes)-1:
-        raise ValueError("The number of random edges must be greater than the number of nodes.")
-    
-    for _ in range(edges):
-        node1 = random.choice(nodes)    
-        node2 = random.choice(nodes)
+    if edges > G.number_of_edges():
+        raise ValueError("The number of random edges must be less than or equal to the maximum possible edges.")
 
-        while G.has_edge(node1, node2) or node1 == node2:
-            node1 = random.choice(nodes)
-            node2 = random.choice(nodes)
-        G.add_edge(node1, node2)
+    edges_to_remove = G.number_of_edges() - edges
+    random_edges = list(G.edges())
+    random.shuffle(random_edges)
+
+    for edge in random_edges[:edges_to_remove]:
+        G.remove_edge(*edge)
+
     return G
-
 
 def drawGraph(G):
     pos = nx.spring_layout(G)
     nx.draw(G, pos, with_labels=True, font_weight='bold', node_color='lightblue', edge_color='gray') 
     plt.show()
-    return
+
+def has_edges_for_all_nodes(G):
+    return {node: G.degree(node) > 0 for node in G.nodes()}
 
 
 def initialPartition(graph, k):
@@ -42,7 +41,7 @@ def initialPartition(graph, k):
         for j in range(i, len(vertices), k):
             partition.append(vertices[j])
         partitions.append(partition)
-    print("İlk setler",partitions)    
+    print("Choosen first partition",partitions)
     return partitions
 
 
@@ -64,31 +63,16 @@ def kernighan_lin(graph, sub_set,max_iterations):
     dict_partitions = defaultdict(list)
     dict_partitions[main_cut_size].append(copy.deepcopy(main_partition))
 
-    print("İlk Cut Size:", main_cut_size)
-    print("*********************************************")
     for iteration in range(max_iterations):
         for i in range(sub_set):
             for j in range(i + 1, sub_set):
                 if i < len(main_partition) and j < len(main_partition):
-                    print(f"Iteration {iteration + 1}: Main subset swap olacak {main_partition[i]} and {main_partition[j]} = {main_partition} " )
                     main_partition[i], main_partition[j] = swap_elements(main_partition[i], main_partition[j])
                     gain = calculate_gain(graph, main_partition,main_cut_size, i, j)
-                    print("Swaped Partition:", main_partition)
-                    print(f"Iteration {iteration + 1}: gain:{gain}")
-                    print("*********************************************")
                     if (gain > 0) :
-                         print(f"Iteration {iteration + 1}: Cut size updated because gain > 0 so graph improve eski best cut:{main_cut_size}")
                          new_cut_size = computeCutSize(graph, main_partition)
                          dict_partitions[new_cut_size].append(copy.deepcopy(main_partition))
-                         print("Updated dict \n",dict_partitions)
-                         print(f"best_cut:{new_cut_size}")
-                         print(main_partition)
-                         print("#####################################")
-    for cut_dict, partitions_dict in dict_partitions.items():
-            print(min(dict_partitions.keys()))
-            print(dict_partitions.values())
-            print(f'Cut size Dict: {cut_dict}, Partitions dict: {partitions_dict}')
-    print("Son dict \n",dict_partitions)
+   
     best_cut_size, best_partitions = min(dict_partitions.items())
     return best_partitions, best_cut_size, graph
 
@@ -118,9 +102,16 @@ def calculate_gain(graph, partition,current_cut_size, i, j):
 
 def run ():
     try:
-        nodes = [1, 2, 3, 4,5]
-        edges = 5
+        nodes = [1, 2, 3, 4,5,6,7]
+        edges = 8
         G = createGraph(nodes, edges)
+        edges_info = has_edges_for_all_nodes(G)
+        for node, has_edge in edges_info.items():
+            if not has_edge:
+                print(f"Node {node} does not have edges. Regenerating the graph.")
+                G = createGraph(nodes, edges)
+                break
+
         sub_set = 2
         iterationNumber =2 ** len(nodes)
         result_partition, result_cut_size , graph1 = kernighan_lin(G, sub_set, iterationNumber)
