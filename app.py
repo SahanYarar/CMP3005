@@ -2,8 +2,10 @@ import networkx as nx
 import numpy as np
 import matplotlib.pyplot as plt
 import random
+from collections import defaultdict
+import copy
 
-##Ya gain hesaplamam yanlıs yada cut_size
+##iki bug var graph cizmede bazen tekli kalıyor node ++ best partition ilk partitionsa kod hata veriyor onun için if lazım
 
 def createGraph(nodes,edges):
     G = nx.Graph() 
@@ -40,8 +42,7 @@ def initialPartition(graph, k):
         for j in range(i, len(vertices), k):
             partition.append(vertices[j])
         partitions.append(partition)
-        print("Partition",partition)
-    
+    print("İlk setler",partitions)    
     return partitions
 
 
@@ -56,65 +57,75 @@ def computeCutSize(graph, partition):
                     if graph.has_edge(vertex_i, vertex_j):
                         cut_size += 1
     return cut_size
+ 
+def kernighan_lin(graph, sub_set,max_iterations):
+    main_partition = initialPartition(graph, sub_set)
+    main_cut_size = computeCutSize(graph, main_partition)
+    dict_partitions = defaultdict(list)
+    dict_partitions[main_cut_size].append(copy.deepcopy(main_partition))
 
-
-def kernighan_lin(graph, sub_set, max_iterations=3):
-    best_partition = initialPartition(graph, sub_set)
-    best_cut_size = computeCutSize(graph, best_partition)
-    print("Initial Cut Size:", best_cut_size)
+    print("İlk Cut Size:", main_cut_size)
+    print("*********************************************")
     for iteration in range(max_iterations):
-        improvement = False
         for i in range(sub_set):
             for j in range(i + 1, sub_set):
-                if i < len(best_partition) and j < len(best_partition):
-                    gain = calculate_gain(graph, best_partition, i, j)
+                if i < len(main_partition) and j < len(main_partition):
+                    print(f"Iteration {iteration + 1}: Main subset swap olacak {main_partition[i]} and {main_partition[j]} = {main_partition} " )
+                    main_partition[i], main_partition[j] = swap_elements(main_partition[i], main_partition[j])
+                    gain = calculate_gain(graph, main_partition,main_cut_size, i, j)
+                    print("Swaped Partition:", main_partition)
+                    print(f"Iteration {iteration + 1}: gain:{gain}")
+                    print("*********************************************")
+                    if (gain > 0) :
+                         print(f"Iteration {iteration + 1}: Cut size updated because gain > 0 so graph improve eski best cut:{main_cut_size}")
+                         new_cut_size = computeCutSize(graph, main_partition)
+                         dict_partitions[new_cut_size].append(copy.deepcopy(main_partition))
+                         print("Updated dict \n",dict_partitions)
+                         print(f"best_cut:{new_cut_size}")
+                         print(main_partition)
+                         print("#####################################")
+    for cut_dict, partitions_dict in dict_partitions.items():
+            print(min(dict_partitions.keys()))
+            print(dict_partitions.values())
+            print(f'Cut size Dict: {cut_dict}, Partitions dict: {partitions_dict}')
+    print("Son dict \n",dict_partitions)
+    best_cut_size, best_partitions = min(dict_partitions.items())
+    return best_partitions, best_cut_size, graph
 
-                    print(f"Iteration {iteration + 1}: Gain for swap i: {i} and j: {j}: gain:{gain}")
-                    if gain > 0:
-                        print(f"Iteration {iteration + 1}: Swap Performed with subsets {best_partition[i]} and {best_partition[j]}")
-                        # Swap elements within the subsets
-                        best_partition[i], best_partition[j] = swap_elements(best_partition[i], best_partition[j])
-                        improvement = True
-                        print("Updated Partition:", best_partition)
-                        print("*********************************************")
-
-        if not improvement:
-            break
-        best_cut_size = computeCutSize(graph, best_partition)
-        print(f"Iteration {iteration + 1}: Current Cut Size: {best_cut_size}")
-    return best_partition, best_cut_size ,graph
 
 
 def swap_elements(subset1, subset2):
-    element1 = random.choice(subset1)
-    element2 = random.choice(subset2)
+    random_value1 = random.choice(subset1)
+    random_value2 = random.choice(subset2)
     
-    subset1[subset1.index(element1)] = element2
-    subset2[subset2.index(element2)] = element1
+    subset1[subset1.index(random_value1)] = random_value2
+    subset2[subset2.index(random_value2)] = random_value1
     
     return subset1, subset2
 
-
-def calculate_gain(graph, partition, i, j):
-    gain = 2 * (
-        computeCutSize(graph, partition[:i] + [partition[j]]) +
-        computeCutSize(graph, partition[:j] + [partition[i]])
-    ) - (
-        computeCutSize(graph, partition[:i] + [partition[j]]) +
-        computeCutSize(graph, partition[:j] + [partition[i]])
-    )
+## Sub set elemanlarına bak sonra diğer subset elemanlarıyla arasında edege varmı ona bak varsa bir arttır
+def calculate_gain(graph, partition,current_cut_size, i, j):
+    subset_i = partition[i]
+    subset_j = partition[j]
+    cut_edge = 0
+    for vertex_i in subset_i:
+        for vertex_j in subset_j:
+            if graph.has_edge(vertex_i, vertex_j):
+                cut_edge += 1
+    gain = current_cut_size - cut_edge
     return gain
 
 
 def run ():
     try:
         nodes = [1, 2, 3, 4,5]
-        edges = 8
+        edges = 5
         G = createGraph(nodes, edges)
         sub_set = 2
-        result_partition, result_cut_size , graph1 = kernighan_lin(G, sub_set)
-        print("Best Partition:", result_partition)
-        print("Cut Size:", result_cut_size)
+        iterationNumber =2 ** len(nodes)
+        result_partition, result_cut_size , graph1 = kernighan_lin(G, sub_set, iterationNumber)
+        print("Best Partitions:", result_partition)
+        print("Best Cut Size:", result_cut_size)
         drawGraph(G)
     except ValueError as ve:
         print({'message': f"Given edges can't be smaller than nodes :{ve}"}, 400)
