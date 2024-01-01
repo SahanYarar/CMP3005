@@ -70,6 +70,7 @@ def computeCutSize(graph, partition):
 def kernighan_lin(graph, sub_set, max_iterations):
     main_partition = initialPartition(graph, sub_set)
     main_cut_size = computeCutSize(graph, main_partition)
+    print("First cut size:", main_cut_size)
     dict_partitions = defaultdict(list)
     dict_partitions[main_cut_size].append((copy.deepcopy(main_partition)))
     for iteration in range(max_iterations):
@@ -84,8 +85,6 @@ def kernighan_lin(graph, sub_set, max_iterations):
     best_cut_size = min(dict_partitions.keys())
     best_partitions = dict_partitions[best_cut_size]
     return best_partitions, best_cut_size, graph
-
-
 
 def swap_elements(subset1, subset2):
     random_value1 = random.choice(subset1)
@@ -108,7 +107,6 @@ def calculate_gain(graph, partition,current_cut_size, i, j):
     gain = current_cut_size - cut_edge
     return gain
 
-
 def delete_duplicated_values(partition_list):
     unique_list = []
     seen_set = set()
@@ -122,6 +120,16 @@ def delete_duplicated_values(partition_list):
             unique_list.append(inner_list)
     return unique_list
 
+def make_sorted_list(partition_list):
+    result_list = []
+    for sub_list in partition_list:
+        new_sub_list = []
+        for partition in sub_list:
+            sorted_partition_list = sorted(partition)
+            new_sub_list.append(sorted_partition_list)
+        result_list.append(new_sub_list)
+    return result_list
+                    
 def run ():
     try:
         nodes = [1, 2, 3, 4,5]
@@ -134,12 +142,12 @@ def run ():
                 G = createGraph(nodes, edges)
                 break
         sub_set = 2
-        iterationNumber = 10
+        iterationNumber = 100
         result_partition, result_cut_size , graph1 = kernighan_lin(G, sub_set, iterationNumber)
-        last_list = delete_duplicated_values(result_partition)
-
+        sorted_list = make_sorted_list(result_partition)
+        last_list = delete_duplicated_values(sorted_list)
+        print("Best Partitions  ",last_list)  
         print("Best Cut Size:", result_cut_size)
-        print("Best Partitions",last_list)        
         drawGraph(G)
     except ValueError as ve:
         return {'message': f"Given edges can't be smaller than nodes :{ve}"}, 400
