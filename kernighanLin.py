@@ -142,7 +142,7 @@ def run ():
                 G = createGraph(nodes, edges)
                 break
         sub_set = 2
-        iterationNumber = 1000
+        iterationNumber = 100
         result_partition, result_cut_size , graph1 = kernighan_lin(G, sub_set, iterationNumber)
         sorted_list = make_sorted_list(result_partition)
         last_list = delete_duplicated_values(sorted_list)
