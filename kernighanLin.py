@@ -34,9 +34,21 @@ def createGraph(nodes, edges):
         random_edges.remove(new_edge)
     return G
 
-def drawGraph(G):
-    pos = nx.spring_layout(G)
-    nx.draw(G, pos, with_labels=True, font_weight='bold', node_color='lightblue', edge_color='gray') 
+def drawGraphs(initial_graph, last_partition, main_partition):
+    plt.figure(figsize=(15, 5))
+
+    plt.subplot(1, 3, 1)
+    pos_init = nx.spring_layout(initial_graph)
+    nx.draw(initial_graph, pos_init, with_labels=True, font_weight='bold', node_color='lightblue', edge_color='gray')
+    plt.title('Initial Graph')
+
+    plt.subplot(1, 3, 3)
+    pos_last = nx.spring_layout(initial_graph)
+    nx.draw(initial_graph, pos_last, with_labels=True, font_weight='bold', node_color='lightblue', edge_color='gray')
+    nx.draw_networkx_nodes(initial_graph, pos_last, nodelist=last_partition[0], node_color='orange')
+    nx.draw_networkx_nodes(initial_graph, pos_last, nodelist=last_partition[1], node_color='green')
+    plt.title('Best Partition')
+
     plt.show()
 
 def has_edges_for_all_nodes(G):
@@ -52,7 +64,7 @@ def initialPartition(graph, k):
         for j in range(i, len(vertices), k):
             partition.append(vertices[j])
         partitions.append(partition)
-    print("Choosen first partition",partitions)
+    print("Chosen first partition",partitions)
     return partitions
 
 def computeCutSize(graph, partition):
@@ -70,6 +82,7 @@ def computeCutSize(graph, partition):
 def kernighan_lin(graph, sub_set, max_iterations):
     main_partition = initialPartition(graph, sub_set)
     main_cut_size = computeCutSize(graph, main_partition)
+    print("First cut size:", main_cut_size)
     dict_partitions = defaultdict(list)
     dict_partitions[main_cut_size].append((copy.deepcopy(main_partition)))
     for iteration in range(max_iterations):
@@ -84,8 +97,6 @@ def kernighan_lin(graph, sub_set, max_iterations):
     best_cut_size = min(dict_partitions.keys())
     best_partitions = dict_partitions[best_cut_size]
     return best_partitions, best_cut_size, graph
-
-
 
 def swap_elements(subset1, subset2):
     random_value1 = random.choice(subset1)
@@ -108,7 +119,6 @@ def calculate_gain(graph, partition,current_cut_size, i, j):
     gain = current_cut_size - cut_edge
     return gain
 
-
 def delete_duplicated_values(partition_list):
     unique_list = []
     seen_set = set()
@@ -122,9 +132,19 @@ def delete_duplicated_values(partition_list):
             unique_list.append(inner_list)
     return unique_list
 
-def run ():
+def make_sorted_list(partition_list):
+    result_list = []
+    for sub_list in partition_list:
+        new_sub_list = []
+        for partition in sub_list:
+            sorted_partition_list = sorted(partition)
+            new_sub_list.append(sorted_partition_list)
+        result_list.append(new_sub_list)
+    return result_list
+                    
+def run():
     try:
-        nodes = [1, 2, 3, 4,5]
+        nodes = [1, 2, 3, 4, 5]
         edges = 7
         G = createGraph(nodes, edges)
         edges_info = has_edges_for_all_nodes(G)
@@ -134,13 +154,14 @@ def run ():
                 G = createGraph(nodes, edges)
                 break
         sub_set = 2
-        iterationNumber = 10
-        result_partition, result_cut_size , graph1 = kernighan_lin(G, sub_set, iterationNumber)
-        last_list = delete_duplicated_values(result_partition)
-
+        iterationNumber = 100
+        result_partition, result_cut_size, graph1 = kernighan_lin(G, sub_set, iterationNumber)
+        sorted_list = make_sorted_list(result_partition)
+        last_list = delete_duplicated_values(sorted_list)
+        print("Best Partitions  ", last_list)
         print("Best Cut Size:", result_cut_size)
-        print("Best Partitions",last_list)        
-        drawGraph(G)
+        drawGraphs(G, last_list[-1], result_partition[0])
     except ValueError as ve:
         return {'message': f"Given edges can't be smaller than nodes :{ve}"}, 400
+
 run()
